@@ -102,7 +102,11 @@ static void JNWCollectionViewCommonInit(JNWCollectionView *collectionView) {
 	
 	// By default we are layer-backed.
 	collectionView.wantsLayer = YES;
-	
+
+	[[NSNotificationCenter defaultCenter] addObserver:collectionView selector:@selector(customLayout) name:NSScrollViewDidLiveScrollNotification object:collectionView];
+
+	[[NSNotificationCenter defaultCenter] addObserver:collectionView selector:@selector(customLayout) name:NSScrollViewDidEndLiveScrollNotification object:collectionView];
+
 	// Set the document view to a custom class that returns YES to -isFlipped.
 	JNWCollectionViewDocumentView *documentView = [[JNWCollectionViewDocumentView alloc] initWithFrame:CGRectZero];
 	collectionView.collectionViewDocumentView = documentView;
@@ -119,6 +123,15 @@ static void JNWCollectionViewCommonInit(JNWCollectionView *collectionView) {
 	collectionView.drawsBackground = YES;
 }
 
+- (void)dealloc {
+	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSScrollViewWillStartLiveScrollNotification object:self];
+	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSScrollViewDidEndLiveScrollNotification object:self];
+}
+//-(void)scrollWheel:(NSEvent *)event{
+//    [super scrollWheel:event];
+//    [self customLayout];
+//}
+
 - (id)initWithFrame:(NSRect)frameRect {
 	self = [super initWithFrame:frameRect];
 	if (self == nil) return nil;
@@ -134,23 +147,18 @@ static void JNWCollectionViewCommonInit(JNWCollectionView *collectionView) {
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context{
-    if(context == layoutObserverContext){
-        
-        [self layout];
-        
-        return;
-    }
-    [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
-}
+	if(context == layoutObserverContext){
 
-- (void)dealloc{
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:NSScrollViewWillStartLiveScrollNotification object:self];
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:NSScrollViewDidEndLiveScrollNotification object:self];
+		[self layout];
+
+		return;
+    }
+	[super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
 }
 
 #pragma mark Delegate and data source
 
-- (void)setDelegate:(id<JNWCollectionViewDelegate>)delegate {	
+- (void)setDelegate:(id<JNWCollectionViewDelegate>)delegate {
 	_delegate = delegate;
 	_collectionViewFlags.delegateMouseUp = [delegate respondsToSelector:@selector(collectionView:mouseUpInItemAtIndexPath:)];
 	_collectionViewFlags.delegateMouseDown = [delegate respondsToSelector:@selector(collectionView:mouseDownInItemAtIndexPath:)];
@@ -482,13 +490,13 @@ static void JNWCollectionViewCommonInit(JNWCollectionView *collectionView) {
 			if (CGRectIntersectsRect(attributes.frame, rect)) {
 				[visibleIdentifiers addObject:[self layoutIdentifierForSupplementaryViewIdentifier:identifier inSection:section.index]];
 			}
-		}		
+		}
 	}
 	
 	return visibleIdentifiers.copy;
 }
 
-- (NSIndexSet *)indexesForSectionsInRect:(CGRect)rect {	
+- (NSIndexSet *)indexesForSectionsInRect:(CGRect)rect {
 	NSMutableIndexSet *indexes = [NSMutableIndexSet indexSet];
 	
 	if (CGRectEqualToRect(rect, CGRectZero))
@@ -598,7 +606,10 @@ static void JNWCollectionViewCommonInit(JNWCollectionView *collectionView) {
 
 - (void)layout {
 	[super layout];
+	[self customLayout];
+}
 
+- (void)customLayout{
 	if (CGSizeEqualToSize(self.visibleSize, _lastDrawnSize)) {
 		[self layoutCells];
 		[self layoutSupplementaryViews];
@@ -813,7 +824,7 @@ static void JNWCollectionViewCommonInit(JNWCollectionView *collectionView) {
 			
 	// { "index/kind/identifier" : view }
 	NSArray *oldVisibleViewsIdentifiers = self.visibleSupplementaryViewsMap.allKeys;
-	NSArray *updatedVisibleViewsIdentifiers = [self layoutIdentifiersForSupplementaryViewsInRect:self.documentVisibleRect];	
+	NSArray *updatedVisibleViewsIdentifiers = [self layoutIdentifiersForSupplementaryViewsInRect:self.documentVisibleRect];
 	
 	NSMutableArray *viewsToRemoveIdentifers = [NSMutableArray arrayWithArray:oldVisibleViewsIdentifiers];
 	[viewsToRemoveIdentifers removeObjectsInArray:updatedVisibleViewsIdentifiers];
