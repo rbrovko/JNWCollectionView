@@ -83,6 +83,8 @@ typedef NS_ENUM(NSInteger, JNWCollectionViewSelectionType) {
 @dynamic drawsBackground;
 @dynamic backgroundColor;
 
+static void *layoutObserverContext = "1";
+
 // We're using a static function for the common initialization so that subclassers
 // don't accidentally override this method in their own common init method.
 static void JNWCollectionViewCommonInit(JNWCollectionView *collectionView) {
@@ -129,6 +131,21 @@ static void JNWCollectionViewCommonInit(JNWCollectionView *collectionView) {
 	if (self == nil) return nil;
 	JNWCollectionViewCommonInit(self);
 	return self;
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context{
+    if(context == layoutObserverContext){
+        
+        [self layout];
+        
+        return;
+    }
+    [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
+}
+
+- (void)dealloc{
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:NSScrollViewWillStartLiveScrollNotification object:self];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:NSScrollViewDidEndLiveScrollNotification object:self];
 }
 
 #pragma mark Delegate and data source
